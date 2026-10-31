@@ -3,7 +3,6 @@
 transfer a file.<br>&nbsp;&nbsp;
   b) Using TCP socket download a webpage and get the URL and
 pass it for buffering the content and write it as a html file</p>
-<p></p>
 
 ### 1(a): TCP Client-Server Application to Transfer a File
 
@@ -246,9 +245,10 @@ Web page downloaded as page.html
 ---
 
 ## Result
-The Java application successfully connected to the HTTP server via TCP sockets, buffered the webpage text stream, and stored it locally as an HTML file.
-
-### Experiment 1(c): Simple TCP Client-Server Chat Application
+#### The Java application successfully connected to the HTTP server via TCP sockets, buffered the webpage text stream, and stored it locally as an HTML file.
+---
+# 2. Write a program to implement the TCP Client Server Chat Application using Sockets
+### Experiment 2: Simple TCP Client-Server Chat Application
 
 ## Aim
 To write a beginner-friendly Java program to implement a turn-by-turn chat application between a client and a server using TCP sockets.
@@ -420,6 +420,263 @@ Chat ended.
 The simplified turn-by-turn TCP Client-Server chat application was implemented successfully, and messages were transmitted reliably.
 
 
+# 3. Write a programs hello_server for TCP (The client connects to the server, sends the string "Hello, world!", then closes the connection )
+##### Experiment 3: Simple TCP Hello World Application
+
+## Aim
+To write a Java program (`hello_server` and client) where a client connects to a server over a TCP socket, sends the static message string "Hello, world!", and immediately closes the connection.
+
+---
+
+## Algorithm
+
+1. **Server Setup:** The server initializes a `ServerSocket` on port `7000` and waits passively for an incoming request using `accept()`.
+2. **Client Connection:** The client actively initiates a network connection to the server at `localhost:7000`.
+3. **Data Transmission:** 
+   * The client sets up a `PrintWriter` network output stream and instantly transmits the text string `"Hello, world!"` using `println()`.
+   * The server intercepts the data stream using a `BufferedReader` and prints the received message to its console window.
+4. **Immediate Disconnection:** As soon as the single message string is pushed through the network pipeline, both programs close all open network streams and exit.
+
+---
+
+## Program Code
+
+### 1. `HelloServer.java`
+```java
+import java.io.*;
+import java.net.*;
+
+public class HelloServer {
+    public static void main(String[] args) throws Exception {
+        // 1. Listen on Port 7000 and wait for the client connection
+        ServerSocket serverSocket = new ServerSocket(7000);
+        System.out.println("Server waiting for a connection...");
+        Socket socket = serverSocket.accept();
+        
+        // 2. Set up a network input stream to read incoming text data
+        BufferedReader networkIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        
+        // 3. Read the single line sent by the client and print it
+        String clientMessage = networkIn.readLine();
+        System.out.println("Received from Client: " + clientMessage);
+        
+        // 4. Immediately close connection streams
+        networkIn.close();
+        socket.close();
+        serverSocket.close();
+        System.out.println("Server closed connection.");
+    }
+}
+```
+
+### 2. `HelloClient.java`
+```java
+import java.io.*;
+import java.net.*;
+
+public class HelloClient {
+    public static void main(String[] args) throws Exception {
+        // 1. Actively connect to the server at localhost on Port 7000
+        System.out.println("Connecting to the server...");
+        Socket socket = new Socket("localhost", 7000);
+        
+        // 2. Set up a network output stream to send text data (true enables auto-flush)
+        PrintWriter networkOut = new PrintWriter(socket.getOutputStream(), true);
+        
+        // 3. Send the exact requested message string
+        networkOut.println("Hello, world!");
+        System.out.println("Message 'Hello, world!' sent successfully.");
+        
+        // 4. Immediately close connection streams
+        networkOut.close();
+        socket.close();
+        System.out.println("Client closed connection.");
+    }
+}
+```
+
+---
+
+## Commands to Compile and Run
+
+### Compilation
+```bash
+javac HelloServer.java HelloClient.java
+```
+
+### Execution
+
+#### **Terminal 1 (Run First)**
+```bash
+java HelloServer
+```
+
+#### **Terminal 2 (Run Second)**
+```bash
+java HelloClient
+```
+
+---
+
+## Output
+
+### Terminal 1 - HelloServer
+```text
+Server waiting for a connection...
+Received from Client: Hello, world!
+Server closed connection.
+```
+
+### Terminal 2 - HelloClient
+```text
+Connecting to the server...
+Message 'Hello, world!' sent successfully.
+Client closed connection.
+```
+
+---
+
+## Result
+The TCP Client-Server application was implemented successfully. The client established a connection, delivered the message string "Hello, world!", and terminated the session smoothly without lingering resources.
+
+
+<h1>4. Write the program for Simulation of DNS using UDP Socket by
+getting the frame size from the user and create the frame sized
+user request and send the frame to server from the client.</h1>
+<p>Experiment 4: Simulation of DNS Using UDP Sockets with Custom Frame Sizes</p>
+
+
+## Aim
+To design and implement a DNS simulation program using UDP Sockets where the client transmits a domain query alongside a user-specified frame size requirement to a server for IP resolution.
+
+---
+
+## Program Code
+
+### 1. `DNSServer.java`
+```java
+import java.net.*;
+import java.util.*;
+
+public class DNSServer {
+    public static void main(String[] args) throws Exception {
+        // Simple DNS table mapping domains to static IPs
+        Map<String, String> table = new HashMap<>();
+        table.put("www.google.com", "142.250.190.4");
+        table.put("www.annauniv.edu", "14.139.161.10");
+        table.put("www.example.com", "93.184.216.34");
+
+        // Bind server to UDP Port 6000
+        DatagramSocket socket = new DatagramSocket(6000);
+        byte[] buffer = new byte[1024];
+        System.out.println("DNS Server waiting...");
+
+        // Receive the client query packet
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        socket.receive(packet);
+
+        // Parse client data payload
+        String request = new String(packet.getData(), 0, packet.getLength());
+        String[] data = request.split(",");
+        String domain = data[0].trim();
+        int frameSize = Integer.parseInt(data[1].trim());
+
+        System.out.println("Request: " + domain + ", frame size = " + frameSize);
+
+        // Match domain request against memory table
+        String ip = table.get(domain);
+        if (ip == null) { 
+            // Fallback: Query system DNS resolver if missing from local table
+            try { 
+                ip = InetAddress.getByName(domain).getHostAddress(); 
+            } catch (Exception e) { 
+                ip = "Domain not found"; 
+            }
+        }
+
+        // Formulate output string payload response
+        String result = "Domain: " + domain + "\nIP: " + ip + "\nFrame Size: " + frameSize + " bytes";
+        byte[] response = result.getBytes();
+
+        // Send datagram packet response back to client coordinates
+        socket.send(new DatagramPacket(response, response.length, packet.getAddress(), packet.getPort()));
+        System.out.println("Reply sent.");
+        
+        socket.close();
+    }
+}
+```
+
+### 2. `DNSClient.java`
+```java
+import java.net.*;
+import java.util.*;
+
+public class DNSClient {
+    public static void main(String[] args) throws Exception {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter domain name: ");
+        String domain = sc.nextLine();
+        
+        System.out.print("Enter frame size: ");
+        int frameSize = sc.nextInt();
+
+        // Create client Datagram socket
+        DatagramSocket socket = new DatagramSocket();
+        
+        // Pack data using string serialization format
+        byte[] data = (domain + "," + frameSize).getBytes();
+        
+        // Target server running locally on port 6000
+        socket.send(new DatagramPacket(data, data.length, InetAddress.getByName("localhost"), 6000));
+
+        // Setup buffer allocation to intercept incoming server replies
+        byte[] buffer = new byte[1024];
+        DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+        socket.receive(response);
+
+        // Display results returned by the DNS simulator
+        System.out.println("\n--- Reply from DNS server ---");
+        System.out.println(new String(response.getData(), 0, response.getLength()));
+        
+        socket.close();
+        sc.close();
+    }
+}
+```
+
+---
+
+## Execution and Output Verification
+
+### Compilation Command
+```bash
+javac DNSServer.java DNSClient.java
+```
+
+### Terminal 1 - DNS Server Console
+```text
+DNS Server waiting...
+Request: www.annauniv.edu, frame size = 512
+Reply sent.
+```
+
+### Terminal 2 - DNS Client Console
+```text
+Enter domain name: www.annauniv.edu
+Enter frame size: 512
+
+--- Reply from DNS server ---
+Domain: www.annauniv.edu
+IP: 14.139.161.10
+Frame Size: 512 bytes
+```
+
+---
+
+## Result
+The UDP DNS simulation program was compiled and executed successfully. The communication between the server and the client was verified by resolving host requests accurately based on custom frame transmission parameters.
 
 
 
