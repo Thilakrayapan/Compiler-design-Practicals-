@@ -424,38 +424,44 @@ import java.util.*;
 
 public class DNSServer {
     public static void main(String[] args) throws Exception {
-        // Simple DNS table (domain -> IP)
-        Map<String, String> table = new HashMap<>();
-        table.put("www.google.com", "142.250.190.4");
-        table.put("www.annauniv.edu", "14.139.161.10");
-        table.put("www.example.com", "93.184.216.34");
 
-        DatagramSocket socket = new DatagramSocket(6000);
-        byte[] buffer = new byte[1024];
-        System.out.println("DNS Server waiting...");
+        Map<String, String> dns = new HashMap<>();
+        dns.put("www.google.com", "142.250.190.4");
+        dns.put("www.example.com", "93.184.216.34");
 
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-        socket.receive(packet);
+        DatagramSocket s = new DatagramSocket(6000);
+        byte[] b = new byte[1024];
 
-        String request = new String(packet.getData(), 0, packet.getLength());
+        System.out.println("DNS Server Waiting...");
+
+        DatagramPacket p = new DatagramPacket(b, b.length);
+        s.receive(p);
+
+        String request = new String(p.getData(), 0, p.getLength());
         String[] data = request.split(",");
+
         String domain = data[0].trim();
-        int frameSize = Integer.parseInt(data[1].trim());
-        System.out.println("Request: " + domain + ", frame size = " + frameSize);
+        int size = Integer.parseInt(data[1].trim());
 
-        String ip = table.get(domain);
-        if (ip == null) { // not in table: try system resolver
-            try { ip = InetAddress.getByName(domain).getHostAddress(); }
-            catch (Exception e) { ip = "Domain not found"; }
-        }
+        String ip = dns.get(domain);
 
-        String result = "Domain: " + domain + "\nIP: " + ip
-                + "\nFrame Size: " + frameSize + " bytes";
-        byte[] response = result.getBytes();
-        socket.send(new DatagramPacket(response, response.length,
-                packet.getAddress(), packet.getPort()));
+        if (ip == null)
+            ip = "Domain not found";
+
+        String reply = "Domain: " + domain +
+                       "\nIP: " + ip +
+                       "\nFrame Size: " + size + " bytes";
+
+        byte[] result = reply.getBytes();
+
+        s.send(new DatagramPacket(result, result.length,
+                p.getAddress(), p.getPort()));
+
+        System.out.println("Request received: " + domain);
+        System.out.println("Frame Size: " + size + " bytes");
         System.out.println("Reply sent.");
-        socket.close();
+
+        s.close();
     }
 }
 ```
@@ -468,24 +474,32 @@ import java.util.*;
 
 public class DNSClient {
     public static void main(String[] args) throws Exception {
+
         Scanner sc = new Scanner(System.in);
+
         System.out.print("Enter domain name: ");
         String domain = sc.nextLine();
-        System.out.print("Enter frame size: ");
-        int frameSize = sc.nextInt();
 
-        DatagramSocket socket = new DatagramSocket();
-        byte[] data = (domain + "," + frameSize).getBytes();
-        socket.send(new DatagramPacket(data, data.length,
+        System.out.print("Enter frame size: ");
+        int size = sc.nextInt();
+
+        DatagramSocket s = new DatagramSocket();
+
+        String request = domain + "," + size;
+        byte[] data = request.getBytes();
+
+        s.send(new DatagramPacket(data, data.length,
                 InetAddress.getByName("localhost"), 6000));
 
-        byte[] buffer = new byte[1024];
-        DatagramPacket response = new DatagramPacket(buffer, buffer.length);
-        socket.receive(response);
+        byte[] b = new byte[1024];
+        DatagramPacket p = new DatagramPacket(b, b.length);
 
-        System.out.println("\n--- Reply from DNS server ---");
-        System.out.println(new String(response.getData(), 0, response.getLength()));
-        socket.close();
+        s.receive(p);
+
+        System.out.println("\n--- DNS Server Reply ---");
+        System.out.println(new String(p.getData(), 0, p.getLength()));
+
+        s.close();
     }
 }
 ```
@@ -507,21 +521,21 @@ java DNSClient
 #### Terminal 1 - DNS Server
 
 ```text
-DNS Server waiting...
-Request: www.annauniv.edu, frame size = 512
+DNS Server Waiting...
+Request received: www.google.com
+Frame Size: 100 bytes
 Reply sent.
 ```
 
 #### Terminal 2 - DNS Client
-
 ```text
-Enter domain name: www.annauniv.edu
-Enter frame size: 512
+Enter domain name: www.google.com
+Enter frame size: 100
 
---- Reply from DNS server ---
-Domain: www.annauniv.edu
-IP: 14.139.161.10
-Frame Size: 512 bytes
+--- DNS Server Reply ---
+Domain: www.google.com
+IP: 142.250.190.4
+Frame Size: 100 bytes
 ```
 
 **Result:** The program was executed successfully and the output was verified.
